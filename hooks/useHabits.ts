@@ -77,6 +77,21 @@ export const useHabits = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  const editHabit = async (id: number, name: string, reminderTime: string | null) => {
+    // 1. Update in DB
+    await db.updateHabit(id, name, reminderTime);
+    
+    // 2. Handle reminders (cancel old one, schedule new one if any)
+    await cancelHabitReminder(id);
+    if (reminderTime) {
+      await scheduleHabitReminder(id, name, reminderTime);
+    }
+    
+    // 3. Refresh data
+    await refreshData();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
   const toggleHabit = async (habitId: number) => {
     const today = format(new Date(), 'yyyy-MM-dd');
     const isCompleted = todayCompletions.includes(habitId);
@@ -113,6 +128,7 @@ export const useHabits = () => {
     stats,
     loading,
     addHabit,
+    editHabit,
     toggleHabit,
     deleteHabit,
     refreshData

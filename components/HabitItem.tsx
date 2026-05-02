@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TouchableOpacity } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, withSpring, withSequence } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -8,9 +9,10 @@ interface HabitItemProps {
   isCompleted: boolean;
   onToggle: () => void;
   onDelete: () => void;
+  onLongPress: () => void;
 }
 
-export const HabitItem: React.FC<HabitItemProps> = ({ name, isCompleted, onToggle }) => {
+export const HabitItem: React.FC<HabitItemProps> = ({ name, isCompleted, onToggle, onDelete, onLongPress }) => {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -26,19 +28,29 @@ export const HabitItem: React.FC<HabitItemProps> = ({ name, isCompleted, onToggl
     };
   });
 
+  const renderRightActions = () => {
+    return (
+      <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+        <MaterialCommunityIcons name="trash-can-outline" size={24} color="#FFFFFF" />
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <Pressable onPress={onToggle} style={styles.container}>
-      <Animated.View style={[styles.content, animatedStyle]}>
-        <View style={styles.textContainer}>
-          <Text style={[styles.name, isCompleted && styles.completedText]}>{name}</Text>
-        </View>
-        <View style={[styles.checkbox, isCompleted && styles.checkboxActive]}>
-          <Animated.View style={checkStyle}>
-            <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
-          </Animated.View>
-        </View>
-      </Animated.View>
-    </Pressable>
+    <Swipeable renderRightActions={renderRightActions} overshootRight={false}>
+      <Pressable onPress={onToggle} onLongPress={onLongPress} style={styles.container}>
+        <Animated.View style={[styles.content, animatedStyle]}>
+          <View style={styles.textContainer}>
+            <Text style={[styles.name, isCompleted && styles.completedText]}>{name}</Text>
+          </View>
+          <View style={[styles.checkbox, isCompleted && styles.checkboxActive]}>
+            <Animated.View style={checkStyle}>
+              <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </Swipeable>
   );
 };
 
@@ -83,5 +95,15 @@ const styles = StyleSheet.create({
   checkboxActive: {
     backgroundColor: '#000000',
     borderColor: '#000000',
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    marginVertical: 12,
+    marginRight: 20,
+    borderRadius: 16,
+    borderCurve: 'continuous',
   },
 });

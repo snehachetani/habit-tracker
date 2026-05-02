@@ -58,6 +58,16 @@ export const addHabit = async (name: string, reminderTime: string | null): Promi
   return result.lastInsertRowId;
 };
 
+export const updateHabit = async (id: number, name: string, reminderTime: string | null) => {
+  const database = await initDatabase();
+  await database.runAsync(
+    'UPDATE habits SET name = ?, reminder_time = ? WHERE id = ?',
+    name,
+    reminderTime,
+    id
+  );
+};
+
 export const deleteHabit = async (id: number) => {
   const database = await initDatabase();
   await database.runAsync('DELETE FROM habits WHERE id = ?', id);

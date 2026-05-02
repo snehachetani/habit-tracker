@@ -7,8 +7,28 @@ import { HabitItem } from '../../components/HabitItem';
 import { AddHabitSheet } from '../../components/AddHabitSheet';
 
 const TodayScreen = () => {
-  const { habits, todayCompletions, loading, addHabit, toggleHabit, deleteHabit } = useHabits();
+  const { habits, todayCompletions, loading, addHabit, editHabit, toggleHabit, deleteHabit } = useHabits();
   const [isAddVisible, setIsAddVisible] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<{ id: number; name: string; reminderTime: string | null } | null>(null);
+
+  const handleSave = (id: number | null, name: string, reminderTime: string | null) => {
+    if (id) {
+      editHabit(id, name, reminderTime);
+    } else {
+      addHabit(name, reminderTime);
+    }
+  };
+
+  const openEdit = (habit: { id: number; name: string; reminder_time: string | null }) => {
+    setEditingHabit({ id: habit.id, name: habit.name, reminderTime: habit.reminder_time });
+    setIsAddVisible(true);
+  };
+
+  const handleClose = () => {
+    setIsAddVisible(false);
+    // Slight delay to allow modal close animation before clearing state
+    setTimeout(() => setEditingHabit(null), 300);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -46,6 +66,7 @@ const TodayScreen = () => {
                   isCompleted={todayCompletions.includes(habit.id)}
                   onToggle={() => toggleHabit(habit.id)}
                   onDelete={() => deleteHabit(habit.id)}
+                  onLongPress={() => openEdit(habit)}
                 />
               ))
             )}
@@ -54,8 +75,9 @@ const TodayScreen = () => {
 
         <AddHabitSheet
           isVisible={isAddVisible}
-          onClose={() => setIsAddVisible(false)}
-          onAdd={addHabit}
+          onClose={handleClose}
+          onSave={handleSave}
+          initialHabit={editingHabit}
         />
       </View>
     </SafeAreaView>

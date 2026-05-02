@@ -1,26 +1,67 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { requestPermissions, scheduleHabitReminder } from '../utils/notifications';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { requestPermissions } from '../utils/notifications';
+import { format } from 'date-fns';
 
 interface AddHabitSheetProps {
   isVisible: boolean;
   onClose: () => void;
-  onAdd: (name: string, reminderTime: string | null) => void;
+  onSave: (id: number | null, name: string, reminderTime: string | null) => void;
+  initialHabit?: { id: number; name: string; reminderTime: string | null } | null;
 }
 
-export const AddHabitSheet: React.FC<AddHabitSheetProps> = ({ isVisible, onClose, onAdd }) => {
+export const AddHabitSheet: React.FC<AddHabitSheetProps> = ({ isVisible, onClose, onSave, initialHabit }) => {
   const [name, setName] = useState('');
-  const [reminderTime, setReminderTime] = useState('08:00');
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState(new Date());
 
-  const handleAdd = async () => {
+  useEffect(() => {
+    if (isVisible) {
+      if (initialHabit) {
+        setName(initialHabit.name);
+        if (initialHabit.reminderTime) {
+          setReminderEnabled(true);
+          const [hours, minutes] = initialHabit.reminderTime.split(':').map(Number);
+          const d = new Date();
+          d.setHours(hours, minutes, 0, 0);
+          setReminderTime(d);
+        } else {
+          setReminderEnabled(false);
+          const d = new Date();
+          d.setHours(8, 0, 0, 0);
+          setReminderTime(d);
+        }
+      } else {
+        setName('');
+        setReminderEnabled(false);
+        const d = new Date();
+        d.setHours(8, 0, 0, 0);
+        setReminderTime(d);
+      }
+    }
+  }, [isVisible, initialHabit]);
+
+  const handleSave = async () => {
     if (!name.trim()) return;
     
-    const hasPermission = await requestPermissions();
-    onAdd(name, hasPermission ? reminderTime : null);
-    
-    setName('');
+    let finalReminderTime = null;
+    if (reminderEnabled) {
+      const hasPermission = await requestPermissions();
+      if (hasPermission) {
+        finalReminderTime = format(reminderTime, 'HH:mm');
+      }
+    }
+
+    onSave(initialHabit ? initialHabit.id : null, name, finalReminderTime);
     onClose();
+  };
+
+  const onTimeChange = (event: any, selectedDate?: Date) => {
+    if (selectedDate) {
+      setReminderTime(selectedDate);
+    }
   };
 
   return (
@@ -36,7 +77,7 @@ export const AddHabitSheet: React.FC<AddHabitSheetProps> = ({ isVisible, onClose
       >
         <View style={styles.sheet}>
           <View style={styles.header}>
-            <Text style={styles.title}>New Habit</Text>
+            <Text style={styles.title}>{initialHabit ? 'Edit Habit' : 'New Habit'}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <MaterialCommunityIcons name="close" size={24} color="#000000" />
             </TouchableOpacity>
@@ -53,21 +94,34 @@ export const AddHabitSheet: React.FC<AddHabitSheetProps> = ({ isVisible, onClose
               autoFocus
             />
 
-            <Text style={styles.label}>Reminder Time</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="08:00"
-              placeholderTextColor="#A0A0A0"
-              value={reminderTime}
-              onChangeText={setReminderTime}
-            />
+            <View style={styles.reminderRow}>
+              <Text style={styles.label}>Enable Reminder</Text>
+              <Switch
+                value={reminderEnabled}
+                onValueChange={setReminderEnabled}
+                trackColor={{ false: '#D0D0D0', true: '#000000' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            {reminderEnabled && (
+              <View style={styles.pickerContainer}>
+                <DateTimePicker
+                  value={reminderTime}
+                  mode="time"
+                  display="spinner"
+                  onChange={onTimeChange}
+                  textColor="#000000"
+                />
+              </View>
+            )}
 
             <TouchableOpacity 
-              style={[styles.addButton, !name.trim() && styles.addButtonDisabled]} 
-              onPress={handleAdd}
+              style={[styles.saveButton, !name.trim() && styles.saveButtonDisabled]} 
+              onPress={handleSave}
               disabled={!name.trim()}
             >
-              <Text style={styles.addButtonText}>Add Habit</Text>
+              <Text style={styles.saveButtonText}>{initialHabit ? 'Save Changes' : 'Add Habit'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -120,18 +174,31 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
     paddingVertical: 12,
     color: '#000000',
+    marginBottom: 8,
   },
-  addButton: {
+  reminderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  pickerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 120,
+    overflow: 'hidden',
+  },
+  saveButton: {
     backgroundColor: '#000000',
     borderRadius: 16,
     padding: 18,
     alignItems: 'center',
     marginTop: 24,
   },
-  addButtonDisabled: {
+  saveButtonDisabled: {
     backgroundColor: '#D0D0D0',
   },
-  addButtonText: {
+  saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
